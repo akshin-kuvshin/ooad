@@ -1,0 +1,139 @@
+S.: сначала прочитай все P...S.-ы.
+
+
+
+(1) Диаграмма классов:
+
+    {Классы}:
+1. Staff:
+    +Name:String, +Position:String,
+    Staff(name:String, position:String);
+2. Key [abstract]:
+    +Owner:Staff, rules:Rule[*],
+    Key(owner:Staff), Rule[*] GetRules(),
+    AddRule(rule:Rule), Boolean RemoveRule(rule:Rule);
+3. Card (Ключ-карта; см. связь 1!!!):
+    +ID:Integer[unique, readonly], nextID:Integer[static],
+    Card(owner:Staff);
+4. Fingerprint (Отпечаток пальца; см. связь 2!!!):
+    +Hash:String[unique, readonly],
+    Fingerprint(owner:Staff, hash:String);
+5. Rule:
+    ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7],
+    Rule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
+    Boolean Allows(controllerArea:Area, dayOfWeek:Integer, timeOnly:TimeOnly);
+6. Area:
+    +Name:String, +Address:String,
+    Area(name:String, address:String),
+    Boolean Equals(controllerArea:Area);
+7. Point:
+    controller:Controller,
+    Point(controller:Controller),
+    Boolean RequestAccess(key:Key),
+    -open(), -reject();
+8. Controller:
+    controllerArea:Area, journal:Journal,
+    Controller(controllerArea:Area),
+    Boolean CheckKey(key:Key, point:Point),
+    -Boolean checkRules(rules:Rule[*], time:DateTime);
+9. Event:
+    +Key_:Key[readonly], +Point_:Point[readonly],
+    +Time:DateTime[readonly], +Result:Boolean[readonly],
+    Event(key:Key, point:Point, time:DateTime, result:Boolean);
+10. Journal:
+    -events:Event[*], Event[*] GetEvents(),
+    AddEvent(key:Key, point:Point, time:DateTime, result:Boolean).
+P.S.: сначала перечисляются все атрибуты, потом все операции; атрибут это или же операция - смотри по семантике записи.
+P.P.S.: атрибуты по умолчанию private, операции по умолчанию public.
+
+    {Связи между классами}:
+1. Card наследуется от Key;
+2. Fingerprint наследуется от Key;
+3. Key знает о своём владельце (Staff) - ассоциация (0..* к 1);
+4. Key хранит множество Rule - агрегация (0..* к 0..*; !!!);
+5. Rule знает об Area, в которую предоставляет доступ - ассоциация (0..* к 1);
+7. Controller знает об Area, доступом в которую управляет - ассоциация (1 к 1; !!!);
+8. Controller владеет Journal - композиция (1 к 1; !!!);
+9. Journal состоит из Event - композиция (1 к 0..*);
+10. Event знает о своих Key и Point - две ассоциации (0..* к 1).
+P.P.P.S.: на диаграмме указывай только те кратности связей, которые помечены тремя восклицательными знаками (!!!), причём постарайся сделать это красиво и ровно.
+P.P.P.P.S.: на диаграмме указывай только те роли связей, которые не совпадают с ролями по умолчанию (например, объект типа Staff называется не staff, а owner), причём я не уверен, нужно ли в таком случае (т.е. если всё-таки указываешь роль) указывать owner-а из примера выше в списке атрибутов того класса, который его содержит (например, Key) - изучи этот вопрос сам.
+
+P.P.P.P.P.S.: дополнение к вышеописанной диаграмме классов:
+    {Классы}:
+11. DateTime:
+    +Now:DateTime[static], +DayOfWeek:Integer;
+12. TimeOnly:
+    FromDateTime(dateTime:DateTime).
+    {Связи между классами}:
+11. Rule хранит две коллекции TimeOnly, каждая размером 7 - времена начала и конца доступа для каждого из 7-и дней недели - две агрегации (0..*, 7; !!!);
+12. Список зависимостей (т.н. слабых связей):
+    - Point ----> Key;
+    - Controller ----> Key, Point, Rule, DateTime, TimeOnly (5 отдельных зависимостей);
+    - Journal ----> Key, Event, DateTime (3 отдельных зависимости).
+
+
+
+(2) Диаграммы деятельности:
+
+Сценарий 1: :Point.RequestAccess(key:Key).
+Участники: point:Point (p), :Controller (c), key:Key (k), :Journal (j), :DateTime (dt).
+Сверху вниз:
+1) {p->c} accessAllowed = CheckKey(key, this);
+2) {c->dt} time = Now;
+3) {c->k} rules = GetRules();
+4) {c->c} status = checkRules(rules, time);
+5) {c->j} addEvent(key, point, time, status);
+# alt [accessAllowed == true] 6) {p->p} open();
+# else 7) {p->p} reject();
+# alt end.
+
+Сценарий 2: :Controller.checkRules(rules:Rule[*], time:DateTime).
+Участники: :Controller (c), time:DateTime (dt), :TimeOnly (to), rule:Rule (r), ruleArea:Area (ra).
+Сверху вниз:
+1) {c->dt} dayOfWeek = DayOfWeek; // 0 = Sunday
+2) {c->c} dayOfWeek = (dayOfWeek + 6) % 7; // 0 = Monday
+3) {c->to} timeOnly = FromDateTime(time);
+# loop [for each rule in rules]:
+4) {c->r} accessAllowed = Allows(controllerArea, dayOfWeek, timeOnly);
+5) {r->ra} areaMatches = Equals(controllerArea);
+6) {r->r} timeMatches = (accessTimeStart[dayOfWeek] <= timeOnly <= accessTimeEnd[dayOfWeek]);
+7) {r->r} allow = areaMatches and/&& timeMatches;
+8) {r->c} _return_ allow;
+# opt [accessAllowed == true] 9) {c} _return_ true;
+# opt end;
+# loop end;
+10) {c} _return_ false.
+
+Сценарий 3: :Journal.AddEvent(key:Key, point:Point, time:DateTime, result:Boolean).
+Участники: :Journal (j), event:Event (e).
+Сверху вниз:
+1) {j->e} event = new Event(key, point, time, result);
+2) {j->j} events.Add(event).
+
+(P.)x6_S.: с символа # начинаются или заканчиваются управляющие фреймы, т.е. условия и циклы; _return_ обозначает сам знаешь что; если не указано, куда возвращать результат - возвращай в левый край диаграммы, т.е. это уже результат всего сценария (всей диаграммы).
+(P.)x7_S.: не каждый вызов метода создаёт новую активность на диаграмме; ориентируйся по тому, что написано {в фигурных скобочках}.
+
+
+
+(3) Диаграмма объектов:
+
+    {Объекты}:
+1. bigFinger:Fingerprint:
+    Owner=kolya,
+    rules=[rule],
+    Hash="KOLYA501";
+2. kolya:Staff:
+    Name="Nikolay Osipenko",
+    Position="Student";
+3. rule:Rule:
+    ruleArea=building2,
+    accessTimeStart=[07:00, 07:00, 07:00, 07:00, 07:00, 07:00, null],
+    accessTimeEnd=[22:00, 22:00, 22:00, 22:00, 22:00, 22:00, null];
+4. building2:Area:
+    Name="Building No. 2",
+    Address="36 Lenin Ave., building No. 2, Tomsk, 634050".
+
+(P.)x8_S.: связи на диаграмме объектов полностью вытекают из связей на диаграмме классов.
+(P.)x9_S.: здесь кратности связей не указывай.
+(P.)x10_S.: здесь стоит указать абсолютно все роли связей, при этом вспомни тонкий момент из P.P.P.P.S.
