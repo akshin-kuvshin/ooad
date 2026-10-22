@@ -9,9 +9,11 @@ S.: сначала прочитай все P...S.-ы.
     +Name:String, +Position:String,
     Staff(name:String, position:String);
 2. Key [abstract]:
-    +Owner:Staff, rules:Rule[*],
+    +Owner:Staff, rules:Rule[*], location:Area,
     Key(owner:Staff), Rule[*] GetRules(),
-    AddRule(rule:Rule), Boolean RemoveRule(rule:Rule);
+    EmplaceRule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
+    Boolean RemoveRule(rule:Rule),
+    Area GetLocation(), SwitchLocation(controllerArea:Area);
 3. Card (Ключ-карта; см. связь 1!!!):
     +ID:Integer[unique, readonly], nextID:Integer[static],
     Card(owner:Staff);
@@ -29,7 +31,7 @@ S.: сначала прочитай все P...S.-ы.
 7. Point:
     controller:Controller,
     Point(controller:Controller),
-    Boolean RequestAccess(key:Key),
+    RequestAccess(key:Key),
     -open(), -reject();
 8. Controller:
     controllerArea:Area, journal:Journal,
@@ -39,10 +41,10 @@ S.: сначала прочитай все P...S.-ы.
 9. Event:
     +Key_:Key[readonly], +Point_:Point[readonly],
     +Time:DateTime[readonly], +Result:Boolean[readonly],
-    Event(key:Key, point:Point, time:DateTime, result:Boolean);
+    Event(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area);
 10. Journal:
-    -events:Event[*], Event[*] GetEvents(),
-    AddEvent(key:Key, point:Point, time:DateTime, result:Boolean).
+    events:Event[*], Event[*] GetEvents(),
+    EmplaceEvent(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area).
 P.S.: сначала перечисляются все атрибуты, потом все операции; атрибут это или же операция - смотри по семантике записи.
 P.P.S.: атрибуты по умолчанию private, операции по умолчанию public.
 
@@ -51,7 +53,8 @@ P.P.S.: атрибуты по умолчанию private, операции по 
 2. Fingerprint наследуется от Key;
 3. Key знает о своём владельце (Staff) - ассоциация (0..* к 1);
 4. Key хранит множество Rule - агрегация (0..* к 0..*; !!!);
-5. Rule знает об Area, в которую предоставляет доступ - ассоциация (0..* к 1);
+5. Key знает об Area, в которой сейчас находится (location) - ассоциация (0..* к 1);
+6. Rule знает об Area, в которую предоставляет доступ - ассоциация (0..* к 1);
 7. Controller знает об Area, доступом в которую управляет - ассоциация (1 к 1; !!!);
 8. Controller владеет Journal - композиция (1 к 1; !!!);
 9. Journal состоит из Event - композиция (1 к 0..*);
@@ -68,6 +71,7 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
     {Связи между классами}:
 11. Rule хранит две коллекции TimeOnly, каждая размером 7 - времена начала и конца доступа для каждого из 7-и дней недели - две агрегации (0..*, 7; !!!);
 12. Список зависимостей (т.н. слабых связей):
+    - Key ----> TimeOnly;
     - Point ----> Key;
     - Controller ----> Key, Point, Rule, DateTime, TimeOnly (5 отдельных зависимостей);
     - Journal ----> Key, Event, DateTime (3 отдельных зависимости).
@@ -77,42 +81,59 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 (2) Диаграммы деятельности:
 
 Сценарий 1: :Point.RequestAccess(key:Key).
-Участники: point:Point (p), :Controller (c), key:Key (k), :Journal (j), :DateTime (dt).
+Участники: point:Point (p), :Controller (c), key:Key (k), controllerArea:Area (ca), :Journal (j), :DateTime (dt).
 Сверху вниз:
 1) {p->c} accessAllowed = CheckKey(key, this);
 2) {c->dt} time = Now;
-3) {c->k} rules = GetRules();
-4) {c->c} status = checkRules(rules, time);
-5) {c->j} addEvent(key, point, time, status);
-# alt [accessAllowed == true] 6) {p->p} open();
-# else 7) {p->p} reject();
-# alt end.
+3) {c->k} keyLocation = GetLocation();
+4) {c->c} locationCoincidence = (keyLocation is null);
+# opt [locationCoincidence == false] 5) {c->ca} locationCoincidence = Equals(keyLocation);
+# opt end;
+6) {c->c} accessAllowed = false;
+# opt [locationCoincidence == true]:
+7) {c->k} rules = GetRules();
+8) {c->c} accessAllowed = checkRules(rules, time); // ref на сценарий 2
+# opt end;
+9) {c->j} EmplaceEvent(key, point, time, accessAllowed, controllerArea); // ref на сценарий 3
+# alt [accessAllowed == true] 10) {p->p} open();
+# else 11) {p->p} reject();
+# alt end;
+12) {p} _return_.
 
 Сценарий 2: :Controller.checkRules(rules:Rule[*], time:DateTime).
 Участники: :Controller (c), time:DateTime (dt), :TimeOnly (to), rule:Rule (r), ruleArea:Area (ra).
 Сверху вниз:
 1) {c->dt} dayOfWeek = DayOfWeek; // 0 = Sunday
 2) {c->c} dayOfWeek = (dayOfWeek + 6) % 7; // 0 = Monday
-3) {c->to} timeOnly = FromDateTime(time);
+3) {c->to} timeOnly = FromDateTime(time); // это статический метод, поэтому lifetime у :TimeOnly - вся диаграмма
 # loop [for each rule in rules]:
 4) {c->r} accessAllowed = Allows(controllerArea, dayOfWeek, timeOnly);
 5) {r->ra} areaMatches = Equals(controllerArea);
 6) {r->r} timeMatches = (accessTimeStart[dayOfWeek] <= timeOnly <= accessTimeEnd[dayOfWeek]);
-7) {r->r} allow = areaMatches and/&& timeMatches;
-8) {r->c} _return_ allow;
-# opt [accessAllowed == true] 9) {c} _return_ true;
+7) {r->r} accessAllowed = areaMatches and/&& timeMatches;
+# opt [accessAllowed == true] 8) {c} _return_ true;
 # opt end;
 # loop end;
-10) {c} _return_ false.
+9) {c} _return_ false.
 
-Сценарий 3: :Journal.AddEvent(key:Key, point:Point, time:DateTime, result:Boolean).
-Участники: :Journal (j), event:Event (e).
+Сценарий 3: :Journal.EmplaceEvent(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area).
+Участники: :Journal (j), event:Event (e), Key_:Key (k).
 Сверху вниз:
-1) {j->e} event = new Event(key, point, time, result);
-2) {j->j} events.Add(event).
+1) {j->e} event = new(key, point, time, result, controllerArea); // далее в п. 2-8 описывается работа конструктура
+2) {e->e} Key_ = key;
+3) {e->e} Point_ = point;
+4) {e->e} Time = time;
+5) {e->e} Result = result;
+# opt [Result == true] 6) {e->k} SwitchLocation(controllerArea);
+# alt [location is null] 7) {k->k} location = controllerArea;
+# else 8) {k->k} location = null;
+# alt end;
+9) {j->j} events.Add(event);
+10) {j} _return_.
 
 (P.)x6_S.: с символа # начинаются или заканчиваются управляющие фреймы, т.е. условия и циклы; _return_ обозначает сам знаешь что; если не указано, куда возвращать результат - возвращай в левый край диаграммы, т.е. это уже результат всего сценария (всей диаграммы).
 (P.)x7_S.: не каждый вызов метода создаёт новую активность на диаграмме; ориентируйся по тому, что написано {в фигурных скобочках}.
+(P.)x8_S.: не уверен, что нужно писать двоеточие (:) перед именем класса в названии сценария (на диаграмме это левый верхний угол, после слова sd = sequence diagram).
 
 
 
@@ -134,6 +155,6 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
     Name="Building No. 2",
     Address="36 Lenin Ave., building No. 2, Tomsk, 634050".
 
-(P.)x8_S.: связи на диаграмме объектов полностью вытекают из связей на диаграмме классов.
-(P.)x9_S.: здесь кратности связей не указывай.
-(P.)x10_S.: здесь стоит указать абсолютно все роли связей, при этом вспомни тонкий момент из P.P.P.P.S.
+(P.)x9_S.: связи на диаграмме объектов полностью вытекают из связей на диаграмме классов.
+(P.)x10_S.: здесь кратности связей не указывай.
+(P.)x11_S.: здесь стоит указать абсолютно все роли связей, при этом вспомни тонкий момент из P.P.P.P.S.
