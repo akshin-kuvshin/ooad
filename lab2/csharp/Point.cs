@@ -1,10 +1,12 @@
 class Point
 {
     private Controller controller;
+    public readonly bool Entry;
 
-    public Point(Controller controller)
+    public Point(Controller controller, bool entry)
     {
         this.controller = controller;
+        Entry = entry;
     }
 
     public void RequestAccess(Key key)

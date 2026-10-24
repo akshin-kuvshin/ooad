@@ -6,14 +6,14 @@ S.: сначала прочитай все P...S.-ы.
 
     {Классы}:
 1. Staff:
-    +Name:String, +Position:String,
-    Staff(name:String, position:String);
+    +Name:String, +Position:String, location:Area,
+    Staff(name:String, position:String),
+    Area GetLocation(), SwitchLocation(controllerArea:Area);
 2. Key [abstract]:
-    +Owner:Staff, rules:Rule[*], location:Area,
+    +Owner:Staff[readonly], rules:Rule[*],
     Key(owner:Staff), Rule[*] GetRules(),
     EmplaceRule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
-    Boolean RemoveRule(rule:Rule),
-    Area GetLocation(), SwitchLocation(controllerArea:Area);
+    Boolean RemoveRule(rule:Rule);
 3. Card (Ключ-карта; см. связь 1!!!):
     +ID:Integer[unique, readonly], nextID:Integer[static],
     Card(owner:Staff);
@@ -29,8 +29,8 @@ S.: сначала прочитай все P...S.-ы.
     Area(name:String, address:String),
     Boolean Equals(controllerArea:Area);
 7. Point:
-    controller:Controller,
-    Point(controller:Controller),
+    controller:Controller, Entry:Boolean[readonly],
+    Point(controller:Controller, entry:Boolean),
     RequestAccess(key:Key),
     -open(), -reject();
 8. Controller:
@@ -80,27 +80,28 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 
 (2) Диаграммы деятельности:
 
-Сценарий 1: :Point.RequestAccess(key:Key).
-Участники: point:Point (p), :Controller (c), key:Key (k), controllerArea:Area (ca), :Journal (j), :DateTime (dt).
+Сценарий 1: sd Point.RequestAccess(key:Key).
+Участники: point:Point (p), :Controller (c), Owner:Staff (o), key:Key (k), controllerArea:Area (ca), :Journal (j), :DateTime (dt).
 Сверху вниз:
 1) {p->c} accessAllowed = CheckKey(key, this);
 2) {c->dt} time = Now;
-3) {c->k} keyLocation = GetLocation();
-4) {c->c} locationCoincidence = (keyLocation is null);
-# opt [locationCoincidence == false] 5) {c->ca} locationCoincidence = Equals(keyLocation);
-# opt end;
-6) {c->c} accessAllowed = false;
-# opt [locationCoincidence == true]:
-7) {c->k} rules = GetRules();
-8) {c->c} accessAllowed = checkRules(rules, time); // ref на сценарий 2
-# opt end;
-9) {c->j} EmplaceEvent(key, point, time, accessAllowed, controllerArea); // ref на сценарий 3
-# alt [accessAllowed == true] 10) {p->p} open();
-# else 11) {p->p} reject();
+3) {c->p} entry = Entry;
+4) {c->o} staffLocation = GetLocation();
+# alt [entry == true] 5) {c->c} locationCoincidence = (staffLocation is null);
+# else 6) {c->ca} locationCoincidence = Equals(staffLocation);
 # alt end;
-12) {p} _return_.
+7) {c->c} accessAllowed = false;
+# opt [locationCoincidence == true]:
+8) {c->k} rules = GetRules();
+9) {c->c} accessAllowed = checkRules(rules, time); // ref на сценарий 2
+# opt end;
+10) {c->j} EmplaceEvent(key, point, time, accessAllowed, controllerArea); // ref на сценарий 3
+# alt [accessAllowed == true] 11) {p->p} open();
+# else 12) {p->p} reject();
+# alt end;
+13) {p} _return_.
 
-Сценарий 2: :Controller.checkRules(rules:Rule[*], time:DateTime).
+Сценарий 2: sd Controller.checkRules(rules:Rule[*], time:DateTime) : Boolean.
 Участники: :Controller (c), time:DateTime (dt), :TimeOnly (to), rule:Rule (r), ruleArea:Area (ra).
 Сверху вниз:
 1) {c->dt} dayOfWeek = DayOfWeek; // 0 = Sunday
@@ -116,18 +117,19 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 # loop end;
 9) {c} _return_ false.
 
-Сценарий 3: :Journal.EmplaceEvent(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area).
-Участники: :Journal (j), event:Event (e), Key_:Key (k).
+Сценарий 3: sd Journal.EmplaceEvent(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area).
+Участники: :Journal (j), event:Event (e), Owner:Staff (o).
 Сверху вниз:
 1) {j->e} event = new(key, point, time, result, controllerArea); // далее в п. 2-8 описывается работа конструктура
 2) {e->e} Key_ = key;
 3) {e->e} Point_ = point;
 4) {e->e} Time = time;
 5) {e->e} Result = result;
-# opt [Result == true] 6) {e->k} SwitchLocation(controllerArea);
-# alt [location is null] 7) {k->k} location = controllerArea;
-# else 8) {k->k} location = null;
+# opt [Result == true] 6) {e->o} SwitchLocation(controllerArea);
+# alt [location is null] 7) {o->o} location = controllerArea; // alt вложен в opt!
+# else 8) {o->o} location = null;
 # alt end;
+# opt end;
 9) {j->j} events.Add(event);
 10) {j} _return_.
 
@@ -146,7 +148,8 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
     Hash="KOLYA501";
 2. kolya:Staff:
     Name="Nikolay Osipenko",
-    Position="Student";
+    Position="Student",
+    location=null;
 3. rule:Rule:
     ruleArea=building2,
     accessTimeStart=[07:00, 07:00, 07:00, 07:00, 07:00, 07:00, null],

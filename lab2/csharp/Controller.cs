@@ -11,10 +11,11 @@ class Controller
     public bool CheckKey(Key key, Point point)
     {
         var time = DateTime.Now;
-        var keyLocation = key.GetLocation();
+        var staffLocation = key.Owner.GetLocation();
 
+        var locationCoincidence = point.Entry ? staffLocation is null : area.Equals(staffLocation);
         var accessAllowed = false;
-        if (keyLocation is not null && area.Equals(keyLocation))
+        if (locationCoincidence)
         {
             var rules = key.GetRules();
             accessAllowed = checkRules(rules, time);

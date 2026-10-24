@@ -13,6 +13,6 @@ class Event
         Result = result;
 
         if (Result)
-            Key_.SwitchLocation(controllerArea);
+            Key_.Owner.SwitchLocation(controllerArea);
     }
 }

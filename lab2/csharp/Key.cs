@@ -1,8 +1,7 @@
 abstract class Key
 {
-    public Staff Owner { get; set; }
+    public readonly Staff Owner;
     private List<Rule> rules = new();
-    private Area? location;
 
     public Key(Staff owner)
     {
@@ -18,8 +17,4 @@ abstract class Key
     }
 
     public void RemoveRule(Rule rule) => rules.Remove(rule);
-
-    public Area? GetLocation() => location?.Copy();
-
-    public void SwitchLocation(Area area) => location = location is null ? area : null;
 }
