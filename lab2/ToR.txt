@@ -10,15 +10,15 @@ S.: сначала прочитай все P...S.-ы.
     Staff(name:String, position:String),
     Area GetLocation(), SwitchLocation(controllerArea:Area);
 2. Key [abstract]:
-    +Owner:Staff[readonly], rules:Rule[*],
+    +Owner:Staff{readOnly}, rules:Rule[*],
     Key(owner:Staff), Rule[*] GetRules(),
     EmplaceRule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
     Boolean RemoveRule(rule:Rule);
 3. Card (Ключ-карта; см. связь 1!!!):
-    +ID:Integer[unique, readonly], nextID:Integer[static],
+    +ID:Integer{unique, readOnly}, nextID:Integer[static],
     Card(owner:Staff);
 4. Fingerprint (Отпечаток пальца; см. связь 2!!!):
-    +Hash:String[unique, readonly],
+    +Hash:String{unique, readOnly},
     Fingerprint(owner:Staff, hash:String);
 5. Rule:
     ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7],
@@ -29,7 +29,7 @@ S.: сначала прочитай все P...S.-ы.
     Area(name:String, address:String),
     Boolean Equals(controllerArea:Area);
 7. Point:
-    controller:Controller, Entry:Boolean[readonly],
+    controller:Controller, Entry:Boolean{readOnly},
     Point(controller:Controller, entry:Boolean),
     RequestAccess(key:Key),
     -open(), -reject();
@@ -39,8 +39,8 @@ S.: сначала прочитай все P...S.-ы.
     Boolean CheckKey(key:Key, point:Point),
     -Boolean checkRules(rules:Rule[*], time:DateTime);
 9. Event:
-    +Key_:Key[readonly], +Point_:Point[readonly],
-    +Time:DateTime[readonly], +Result:Boolean[readonly],
+    +Key_:Key{readOnly}, +Point_:Point{readOnly},
+    +Time:DateTime{readOnly}, +Result:Boolean{readOnly},
     Event(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area);
 10. Journal:
     events:Event[*], Event[*] GetEvents(),
@@ -67,9 +67,9 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 11. DateTime:
     +Now:DateTime[static], +DayOfWeek:Integer;
 12. TimeOnly:
-    FromDateTime(dateTime:DateTime).
+    FromDateTime(dateTime:DateTime)[static].
     {Связи между классами}:
-11. Rule хранит две коллекции TimeOnly, каждая размером 7 - времена начала и конца доступа для каждого из 7-и дней недели - две агрегации (0..*, 7; !!!);
+11. Rule хранит две коллекции TimeOnly, каждая размером 7 - времена начала и конца доступа для каждого из 7-и дней недели - две агрегации (0..* к 1..7; !!!);
 12. Список зависимостей (т.н. слабых связей):
     - Key ----> TimeOnly;
     - Point ----> Key;
