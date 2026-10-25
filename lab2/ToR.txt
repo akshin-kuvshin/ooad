@@ -8,12 +8,12 @@ S.: сначала прочитай все P...S.-ы.
 1. Staff:
     +Name:String, +Position:String, location:Area,
     Staff(name:String, position:String),
-    Area GetLocation(), SwitchLocation(controllerArea:Area);
+    GetLocation():Area, SwitchLocation(controllerArea:Area);
 2. Key [abstract]:
     +Owner:Staff{readOnly}, rules:Rule[*],
-    Key(owner:Staff), Rule[*] GetRules(),
+    Key(owner:Staff), GetRules():Rule[*],
     EmplaceRule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
-    Boolean RemoveRule(rule:Rule);
+    RemoveRule(rule:Rule):Boolean;
 3. Card (Ключ-карта; см. связь 1!!!):
     +ID:Integer{unique, readOnly}, nextID:Integer[static],
     Card(owner:Staff);
@@ -23,11 +23,11 @@ S.: сначала прочитай все P...S.-ы.
 5. Rule:
     ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7],
     Rule(ruleArea:Area, accessTimeStart:TimeOnly[7], accessTimeEnd:TimeOnly[7]),
-    Boolean Allows(controllerArea:Area, dayOfWeek:Integer, timeOnly:TimeOnly);
+    Allows(controllerArea:Area, dayOfWeek:Integer, timeOnly:TimeOnly):Boolean;
 6. Area:
     +Name:String, +Address:String,
     Area(name:String, address:String),
-    Boolean Equals(controllerArea:Area);
+    Equals(controllerArea:Area):Boolean;
 7. Point:
     controller:Controller, Entry:Boolean{readOnly},
     Point(controller:Controller, entry:Boolean),
@@ -36,14 +36,14 @@ S.: сначала прочитай все P...S.-ы.
 8. Controller:
     controllerArea:Area, journal:Journal,
     Controller(controllerArea:Area),
-    Boolean CheckKey(key:Key, point:Point),
-    -Boolean checkRules(rules:Rule[*], time:DateTime);
+    CheckKey(key:Key, point:Point):Boolean,
+    -checkRules(rules:Rule[*], time:DateTime):Boolean;
 9. Event:
     +Key_:Key{readOnly}, +Point_:Point{readOnly},
     +Time:DateTime{readOnly}, +Result:Boolean{readOnly},
     Event(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area);
 10. Journal:
-    events:Event[*], Event[*] GetEvents(),
+    events:Event[*], GetEvents():Event[*],
     EmplaceEvent(key:Key, point:Point, time:DateTime, result:Boolean, controllerArea:Area).
 P.S.: сначала перечисляются все атрибуты, потом все операции; атрибут это или же операция - смотри по семантике записи.
 P.P.S.: атрибуты по умолчанию private, операции по умолчанию public.
@@ -67,7 +67,7 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 11. DateTime:
     +Now:DateTime[static], +DayOfWeek:Integer;
 12. TimeOnly:
-    FromDateTime(dateTime:DateTime)[static].
+    FromDateTime(dateTime:DateTime):TimeOnly[static].
     {Связи между классами}:
 11. Rule хранит две коллекции TimeOnly, каждая размером 7 - времена начала и конца доступа для каждого из 7-и дней недели - две агрегации (0..* к 1..7; !!!);
 12. Список зависимостей (т.н. слабых связей):
@@ -101,7 +101,7 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
 # alt end;
 13) {p} _return_.
 
-Сценарий 2: sd Controller.checkRules(rules:Rule[*], time:DateTime) : Boolean.
+Сценарий 2: sd Controller.checkRules(rules:Rule[*], time:DateTime):Boolean.
 Участники: :Controller (c), time:DateTime (dt), :TimeOnly (to), rule:Rule (r), ruleArea:Area (ra).
 Сверху вниз:
 1) {c->dt} dayOfWeek = DayOfWeek; // 0 = Sunday
