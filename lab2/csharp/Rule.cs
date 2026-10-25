@@ -11,6 +11,10 @@ class Rule
         if (accessTimeEnd.Count != 7)
             throw new ArgumentException($"accessTimeEnd must contains exactly 7 elements; given: {accessTimeEnd.Count} elements");
 
+        for (int i = 0; i < 7; ++i)
+            if (accessTimeStart[i] > accessTimeEnd[i])
+                throw new ArgumentException($"For each i=0..6 accessTimeStart[i] must be less or equal to accessTimeEnd[i];\nGiven: accessTimeStart[{i}] = {accessTimeStart[i]} > {accessTimeEnd[i]} = accessTimeEnd[{i}]");
+
         this.area = area;
         this.accessTimeStart = accessTimeStart;
         this.accessTimeEnd = accessTimeEnd;
