@@ -12,8 +12,14 @@ class Rule
             throw new ArgumentException($"accessTimeEnd must contains exactly 7 elements; given: {accessTimeEnd.Count} elements");
 
         for (int i = 0; i < 7; ++i)
+        {
+            if (accessTimeStart[i] is null && accessTimeEnd[i] is not null)
+                throw new ArgumentException($"For each i=0..6 accessTimeStart[i] must be either null or not null simultaneously;\nGiven: accessTimeStart[{i}] is null and accessTimeEnd[{i}] is not null");
+            if (accessTimeStart[i] is not null && accessTimeEnd[i] is null)
+                throw new ArgumentException($"For each i=0..6 accessTimeStart[i] must be either null or not null simultaneously;\nGiven: accessTimeStart[{i}] is not null and accessTimeEnd[{i}] is null");
             if (accessTimeStart[i] > accessTimeEnd[i])
                 throw new ArgumentException($"For each i=0..6 accessTimeStart[i] must be less or equal to accessTimeEnd[i];\nGiven: accessTimeStart[{i}] = {accessTimeStart[i]} > {accessTimeEnd[i]} = accessTimeEnd[{i}]");
+        }
 
         this.area = area;
         this.accessTimeStart = accessTimeStart;

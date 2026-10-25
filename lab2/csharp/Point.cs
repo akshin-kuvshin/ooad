@@ -14,7 +14,7 @@ class Point
         var accessAllowed = controller.CheckKey(key, this);
         if (accessAllowed)
             open();
-        else // !accessAllower
+        else // !accessAllowed
             reject();
     }
 
