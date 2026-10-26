@@ -74,7 +74,7 @@ P.P.P.P.P.S.: дополнение к вышеописанной диаграм�
     - Key ----> TimeOnly;
     - Point ----> Key;
     - Controller ----> Key, Point, Rule, DateTime, TimeOnly (5 отдельных зависимостей);
-    - Journal ----> Key, Event, DateTime (3 отдельных зависимости).
+    - Journal ----> Key, DateTime (2 отдельных зависимости).
 
 
 
