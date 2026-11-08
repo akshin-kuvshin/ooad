@@ -1,4 +1,6 @@
 [ToR.md](https://github.com/user-attachments/files/34543740/ToR.md)
+
+
 \## (1) Анализ 2-х существующих ресурсов
 
 
